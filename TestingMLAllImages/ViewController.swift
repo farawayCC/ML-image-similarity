@@ -12,7 +12,6 @@ import Vision
 import ImageIO
 import Photos
 
-
 //По идее мы только идентификаторы распознанные можем запоминать и по их номерам потом говорить, что является дубликатом а что нет
 class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     

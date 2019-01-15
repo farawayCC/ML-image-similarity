@@ -1,6 +1,5 @@
 
 Podfile.lock
 Pods
-*.xcworkspacedata
 *.xcuserstate
 *.pbxproj
