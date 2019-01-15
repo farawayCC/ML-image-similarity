@@ -137,13 +137,15 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
                     return String(format: "  (%.2f) %@", classification.confidence, classification.identifier)
                 }
                 print("Classification:\n" + descriptions.joined(separator: "\n"))
+                
+                self.endDate = Date()
                 let diffTime = Float(self.endDate.timeIntervalSince(self.startDate))
+                
                 self.timeDifference.text = "Time taken: \((diffTime*10).rounded()/10)"
                 
                 self.classificationsStr.append(descriptions.joined(separator: "\n"))
             }
         }
-        
         tableView.reloadData()
     }
     
