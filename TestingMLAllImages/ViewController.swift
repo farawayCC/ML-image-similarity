@@ -11,12 +11,15 @@ import CoreML
 import Vision
 import ImageIO
 import Photos
+import OpalImagePicker
 
 //По идее мы только идентификаторы распознанные можем запоминать и по их номерам потом говорить, что является дубликатом а что нет
-class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, OpalImagePickerControllerDelegate {
     
     var photos = [CIImage]()
-    var classificationsStr = [String]()
+    var classificationsConfidence = [Float]()
+    var classificationsIdentifier = [String]()
+    var isDuplicatedArr = [Bool]()
     
     let cellReuseIdentifier = "myCell"
     
@@ -30,40 +33,78 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     var loadedCells = 0
     
     var classifiedAssets = [ClassifiedAsset]()
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
         tableView.delegate = self
         tableView.dataSource = self
         
-        PHPhotoLibrary.requestAuthorization { status in
-            switch status {
-                
-            case .authorized:
-                let fetchOptions = PHFetchOptions()
-                let allPhotos = PHAsset.fetchAssets(with: .image, options: fetchOptions)
-                print("Found \(allPhotos.count) assets")
-                self.totalCells = allPhotos.count
-                allPhotos.enumerateObjects({ (asset, index, stop) in
-                    let myCiImage = self.getAssetThumbnail(asset: asset).0
-                    self.photos.append(myCiImage)
-                    
-                    self.updateClassifications(
-                        for: myCiImage,
-                        orientation: self.getAssetThumbnail(asset: asset).1)
-                    self.totalObjects.text = "Object \(index+1) / \(allPhotos.count)"
-                })
-                print("Fetch images from library completed")
-                
-            case .denied, .restricted:
-                print("Not allowed")
-            case .notDetermined:
-                print("Not determined yet")
-            }
-        }
+//        PHPhotoLibrary.requestAuthorization { status in
+//            switch status {
+//
+//            case .authorized:
+//                let fetchOptions = PHFetchOptions()
+//                let allPhotos = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+//                print("Found \(allPhotos.count) assets")
+//                self.totalCells = allPhotos.count
+//                allPhotos.enumerateObjects({ (asset, index, stop) in
+//                    let myCiImage = self.getAssetThumbnail(asset: asset).0
+//                    self.photos.append(myCiImage)
+//
+//                    self.updateClassifications(
+//                        for: myCiImage,
+//                        orientation: self.getAssetThumbnail(asset: asset).1)
+//                    self.totalObjects.text = "Object \(index+1) / \(allPhotos.count)"
+//                })
+//                print("Fetch images from library completed")
+//
+//            case .denied, .restricted:
+//                print("Not allowed")
+//            case .notDetermined:
+//                print("Not determined yet")
+//            }
+//        }
     }
     
+    //MARK: OpalImagePickerDelegate
+    
+    func imagePicker(_ picker: OpalImagePickerController, didFinishPickingAssets assets: [PHAsset]) {
+        var index = 0
+        print("Found \(assets.count) assets")
+        self.totalCells = assets.count
+        
+        photos = [CIImage]()
+        classificationsConfidence = [Float]()
+        classificationsIdentifier = [String]()
+        isDuplicatedArr = [Bool]()
+        
+        for asset in assets {
+            let myCiImage = self.getAssetThumbnail(asset: asset).0
+            self.photos.append(myCiImage)
+            
+            startDate = Date()
+            self.updateClassifications(
+                for: myCiImage,
+                orientation: self.getAssetThumbnail(asset: asset).1)
+            self.totalObjects.text = "Object \(index+1) / \(assets.count)"
+            print("Fetch images from library completed")
+            index += 1
+        }
+        startDate = Date()
+        presentedViewController?.dismiss(animated: true, completion: nil)
+
+    }
+    
+    @IBAction func pickImagesPressed(_ sender: Any) {
+        let imagePicker = OpalImagePickerController()
+        imagePicker.allowedMediaTypes = Set([PHAssetMediaType.image])
+        imagePicker.maximumSelectionsAllowed = 5
+        imagePicker.imagePickerDelegate = self
+        present(imagePicker, animated: true, completion: nil)
+    }
+    
+    //MARK: TableViewDelegate
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return totalCells
     }
@@ -71,12 +112,10 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell:MyCustomCell = self.tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier) as! MyCustomCell
         
-        do {
-            cell.myCellLabel?.text = self.classificationsStr[indexPath.row]
-            cell.myImageView.image = UIImage(ciImage: self.photos[indexPath.row])
-        } catch {
-            print("Seems like not all images processed")
-        }
+        cell.myImageView.image = UIImage(ciImage: self.photos[indexPath.row])
+        cell.isDuplicatedLabel.text = self.isDuplicatedArr[indexPath.row] ? "🎏" : ""
+        cell.myCellLabel?.text =
+            String(format: "  (%.2f) %@", classificationsConfidence[indexPath.row], classificationsIdentifier[indexPath.row])
         
         return cell
     }
@@ -132,21 +171,24 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
             } else {
                 // Display top classifications ranked by confidence in the UI.
                 let topClassifications = classifications.prefix(2)
-                let descriptions = topClassifications.map { classification in
-                    return String(format: "  (%.2f) %@", classification.confidence, classification.identifier)
+                topClassifications.map { classification in
+                    self.classificationsConfidence.append(classification.confidence)
+                    self.classificationsIdentifier.append(classification.identifier)
                 }
-                print("Classification:\n" + descriptions.joined(separator: "\n"))
                 
                 self.endDate = Date()
                 let diffTime = Float(self.endDate.timeIntervalSince(self.startDate))
                 
                 self.timeDifference.text = "Time taken: \((diffTime*10).rounded()/10)"
-                
-                self.classificationsStr.append(descriptions.joined(separator: "\n"))
             }
         }
+        
+        //When all classification ended
+        decideDuplicatePhotos()
         tableView.reloadData()
     }
+    
+    //MARK: Supp funcs
     
     func getAssetThumbnail(asset: PHAsset) -> (CIImage, Int) {
         let manager = PHImageManager.default()
@@ -174,6 +216,14 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
         }
         return ciImages
     }
+    
+    func decideDuplicatePhotos() {
+        //TODO
+        for _ in photos {
+            isDuplicatedArr.append(true)
+        }
+        
+    }
 
 }
 
@@ -181,6 +231,7 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
 class MyCustomCell: UITableViewCell {
     @IBOutlet weak var myImageView: UIImageView!
     @IBOutlet weak var myCellLabel: UILabel!
+    @IBOutlet weak var isDuplicatedLabel: UILabel!
 }
 
 
@@ -188,4 +239,5 @@ struct ClassifiedAsset {
     var identifier = Int()
     var confidence = Float()
     var image = UIImage()
+    var isDuplicated = false
 }
