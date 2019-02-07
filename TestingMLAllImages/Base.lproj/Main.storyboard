@@ -38,30 +38,30 @@
                                 <rect key="frame" x="0.0" y="94" width="375" height="573"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="myCell" rowHeight="181" id="6Fk-AN-EhI" customClass="MyCustomCell" customModule="TestingMLAllImages" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="28" width="375" height="181"/>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="myCell" rowHeight="153" id="6Fk-AN-EhI" customClass="MyCustomCell" customModule="TestingMLAllImages" customModuleProvider="target">
+                                        <rect key="frame" x="0.0" y="28" width="375" height="153"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="6Fk-AN-EhI" id="fKc-oy-q8d">
-                                            <rect key="frame" x="0.0" y="0.0" width="375" height="180.5"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="375" height="152.5"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="iOD-MH-i7F">
-                                                    <rect key="frame" x="15" y="11" width="225" height="150"/>
+                                                <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="iOD-MH-i7F">
+                                                    <rect key="frame" x="15" y="16" width="225" height="100"/>
                                                     <constraints>
-                                                        <constraint firstAttribute="height" constant="150" id="aS7-qP-swh"/>
+                                                        <constraint firstAttribute="height" constant="100" id="j4Q-KW-Pgq"/>
                                                     </constraints>
                                                 </imageView>
-                                                <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="RKU-LY-02Z">
-                                                    <rect key="frame" x="248" y="15.5" width="111.5" height="150"/>
+                                                <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" translatesAutoresizingMaskIntoConstraints="NO" id="RKU-LY-02Z">
+                                                    <rect key="frame" x="248" y="16" width="111.5" height="100"/>
                                                     <subviews>
-                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="classification result" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="nC1-26-Phg">
-                                                            <rect key="frame" x="0.0" y="0.0" width="111.5" height="129.5"/>
+                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="classification result" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="nC1-26-Phg">
+                                                            <rect key="frame" x="0.0" y="0.0" width="111.5" height="50"/>
                                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                             <nil key="textColor"/>
                                                             <nil key="highlightedColor"/>
                                                         </label>
-                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Is duplicated" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="LSg-Ja-7S3">
-                                                            <rect key="frame" x="0.0" y="129.5" width="111.5" height="20.5"/>
+                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Is duplicated" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="LSg-Ja-7S3">
+                                                            <rect key="frame" x="0.0" y="50" width="111.5" height="50"/>
                                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                             <nil key="textColor"/>
                                                             <nil key="highlightedColor"/>
@@ -70,12 +70,13 @@
                                                 </stackView>
                                             </subviews>
                                             <constraints>
-                                                <constraint firstItem="RKU-LY-02Z" firstAttribute="height" secondItem="iOD-MH-i7F" secondAttribute="height" id="Hbf-aP-CwF"/>
-                                                <constraint firstItem="RKU-LY-02Z" firstAttribute="centerY" secondItem="fKc-oy-q8d" secondAttribute="centerY" id="YQs-U3-R9v"/>
-                                                <constraint firstItem="iOD-MH-i7F" firstAttribute="top" secondItem="fKc-oy-q8d" secondAttribute="top" constant="11" id="gAc-Zk-eKe"/>
+                                                <constraint firstItem="RKU-LY-02Z" firstAttribute="height" secondItem="iOD-MH-i7F" secondAttribute="height" id="5nx-ak-irR"/>
+                                                <constraint firstItem="RKU-LY-02Z" firstAttribute="top" secondItem="iOD-MH-i7F" secondAttribute="top" id="cAG-1N-1fB"/>
                                                 <constraint firstItem="RKU-LY-02Z" firstAttribute="leading" secondItem="iOD-MH-i7F" secondAttribute="trailing" constant="8" id="j1g-2Q-Wed"/>
                                                 <constraint firstItem="iOD-MH-i7F" firstAttribute="width" secondItem="fKc-oy-q8d" secondAttribute="width" multiplier="0.6" id="jOm-9v-cZa"/>
+                                                <constraint firstItem="iOD-MH-i7F" firstAttribute="top" secondItem="fKc-oy-q8d" secondAttribute="top" constant="16" id="mJI-uF-kKO"/>
                                                 <constraint firstAttribute="trailing" secondItem="RKU-LY-02Z" secondAttribute="trailing" constant="15.5" id="rdj-Nz-AfU"/>
+                                                <constraint firstAttribute="bottom" secondItem="iOD-MH-i7F" secondAttribute="bottom" constant="16" id="rg5-n3-zeT"/>
                                                 <constraint firstItem="iOD-MH-i7F" firstAttribute="leading" secondItem="fKc-oy-q8d" secondAttribute="leading" constant="15" id="tj2-tF-f92"/>
                                             </constraints>
                                         </tableViewCellContentView>

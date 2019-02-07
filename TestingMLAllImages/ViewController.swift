@@ -31,40 +31,49 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     var endDate = Date()
     var totalCells = 0
     var loadedCells = 0
+    var photosClassified = 0
     
+    /*Когда изображения выбраны-создавай placeholder под них, потом наполняй их информацией, по мере ее поступления:
+     1. Assets from imagePicker(didFinishPickingAssets assets)
+     2. Classification and Confidence in processClassifications(for request)
+     3. Decide similarity in decideSimilarity()
+    */
     var classifiedAssets = [ClassifiedAsset]()
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
         tableView.delegate = self
         tableView.dataSource = self
         
-//        PHPhotoLibrary.requestAuthorization { status in
-//            switch status {
-//
-//            case .authorized:
-//                let fetchOptions = PHFetchOptions()
-//                let allPhotos = PHAsset.fetchAssets(with: .image, options: fetchOptions)
-//                print("Found \(allPhotos.count) assets")
-//                self.totalCells = allPhotos.count
-//                allPhotos.enumerateObjects({ (asset, index, stop) in
-//                    let myCiImage = self.getAssetThumbnail(asset: asset).0
-//                    self.photos.append(myCiImage)
-//
-//                    self.updateClassifications(
-//                        for: myCiImage,
-//                        orientation: self.getAssetThumbnail(asset: asset).1)
-//                    self.totalObjects.text = "Object \(index+1) / \(allPhotos.count)"
-//                })
-//                print("Fetch images from library completed")
-//
-//            case .denied, .restricted:
-//                print("Not allowed")
-//            case .notDetermined:
-//                print("Not determined yet")
-//            }
-//        }
+    }
+    
+    func populateWithAllImages() {
+        //        PHPhotoLibrary.requestAuthorization { status in
+        //            switch status {
+        //
+        //            case .authorized:
+        //                let fetchOptions = PHFetchOptions()
+        //                let allPhotos = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+        //                print("Found \(allPhotos.count) assets")
+        //                self.totalCells = allPhotos.count
+        //                allPhotos.enumerateObjects({ (asset, index, stop) in
+        //                    let myCiImage = self.getAssetThumbnail(asset: asset).0
+        //                    self.photos.append(myCiImage)
+        //
+        //                    self.updateClassifications(
+        //                        for: myCiImage,
+        //                        orientation: self.getAssetThumbnail(asset: asset).1)
+        //                    self.totalObjects.text = "Object \(index+1) / \(allPhotos.count)"
+        //                })
+        //                print("Fetch images from library completed")
+        //
+        //            case .denied, .restricted:
+        //                print("Not allowed")
+        //            case .notDetermined:
+        //                print("Not determined yet")
+        //            }
+        //        }
     }
     
     //MARK: OpalImagePickerDelegate
@@ -74,26 +83,29 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
         print("Found \(assets.count) assets")
         self.totalCells = assets.count
         
+        //Refresh data
         photos = [CIImage]()
         classificationsConfidence = [Float]()
         classificationsIdentifier = [String]()
         isDuplicatedArr = [Bool]()
+        classifiedAssets = [ClassifiedAsset]()
         
         for asset in assets {
             let myCiImage = self.getAssetThumbnail(asset: asset).0
             self.photos.append(myCiImage)
+            
+            classifiedAssets.append(ClassifiedAsset())
+            classifiedAssets[index].image = UIImage(ciImage: getAssetThumbnail(asset: asset).0)
             
             startDate = Date()
             self.updateClassifications(
                 for: myCiImage,
                 orientation: self.getAssetThumbnail(asset: asset).1)
             self.totalObjects.text = "Object \(index+1) / \(assets.count)"
-            print("Fetch images from library completed")
             index += 1
         }
         startDate = Date()
         presentedViewController?.dismiss(animated: true, completion: nil)
-
     }
     
     @IBAction func pickImagesPressed(_ sender: Any) {
@@ -112,10 +124,11 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell:MyCustomCell = self.tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier) as! MyCustomCell
         
-        cell.myImageView.image = UIImage(ciImage: self.photos[indexPath.row])
-        cell.isDuplicatedLabel.text = self.isDuplicatedArr[indexPath.row] ? "🎏" : ""
-        cell.myCellLabel?.text =
-            String(format: "  (%.2f) %@", classificationsConfidence[indexPath.row], classificationsIdentifier[indexPath.row])
+        cell.myImageView.image = self.classifiedAssets[indexPath.row].image
+        cell.isDuplicatedLabel.text = self.classifiedAssets[indexPath.row].isDuplicated ? "🎏" : ""
+        cell.myCellLabel?.text = classificationsIdentifier[indexPath.row]//classifiedAssets[indexPath.row].identifier
+        print("Classification in TableView: \(classificationsIdentifier[indexPath.row])")
+            //String(format: "  (%.2f) %@", classifiedAssets[indexPath.row].confidence, classifiedAssets[indexPath.row].identifier)
         
         return cell
     }
@@ -124,7 +137,6 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     //MARK: ML
     lazy var classificationRequest: VNCoreMLRequest = {
         do {
-            print("Start get model: \(Date())")
             let model = try VNCoreMLModel(for: MobileNet().model)
             let request = VNCoreMLRequest(model: model, completionHandler: { [weak self] request, error in
                 self?.processClassifications(for: request, error: error)
@@ -144,11 +156,6 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
             do {
                 try handler.perform([self.classificationRequest])
             } catch {
-                /*
-                 This handler catches general image processing errors. The `classificationRequest`'s
-                 completion handler `processClassifications(_:error:)` catches errors specific
-                 to processing that request.
-                 */
                 print("Failed to perform classification.\n\(error.localizedDescription)")
             }
         }
@@ -170,8 +177,9 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
                 print("Nothing recognized. \(Date())")
             } else {
                 // Display top classifications ranked by confidence in the UI.
-                let topClassifications = classifications.prefix(2)
+                let topClassifications = classifications.prefix(1)
                 topClassifications.map { classification in
+                    print("Classification: \(classification)")
                     self.classificationsConfidence.append(classification.confidence)
                     self.classificationsIdentifier.append(classification.identifier)
                 }
@@ -181,14 +189,14 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
                 
                 self.timeDifference.text = "Time taken: \((diffTime*10).rounded()/10)"
             }
+            self.photosClassified += 1
         }
         
-        //When all classification ended
-        decideDuplicatePhotos()
         tableView.reloadData()
     }
     
     //MARK: Supp funcs
+    
     
     func getAssetThumbnail(asset: PHAsset) -> (CIImage, Int) {
         let manager = PHImageManager.default()
@@ -208,21 +216,32 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
 //        })
         return (resultImage, orientationRaw)
     }
-
-    func populateClassifiedAssets(from assets: [PHAsset]) -> [CIImage] {
-        var ciImages = [CIImage]()
-        for asset in assets {
-            ciImages.append(getAssetThumbnail(asset: asset).0)
-        }
-        return ciImages
+    
+    //Надо не общую кучу делать, а подгружать в массив по мере поступления и рисовать их в таблицу, чтобы не пытаться определять когда все готово, а сразу работать с данными
+    func formatClassifiedAsset() {
+//        var classifiedAssets = [ClassifiedAsset]()
+//        //TODO
+//        print(classificationsIdentifier, classificationsConfidence)
+//        for i in 0...photos.count-1 {
+//            var classifAsset = ClassifiedAsset(
+//                identifier: classificationsIdentifier[i],
+//                confidence: classificationsConfidence[i],
+//                image: UIImage(ciImage: photos[i]),
+//                isDuplicated: false)
+//            if (i != 0) {
+//                if (classificationsIdentifier[i] == classificationsIdentifier[i-1]) {
+//                    classifAsset.isDuplicated = true
+//                    classifiedAssets[i-1].isDuplicated = true
+//                }
+//            }
+//            classifiedAssets.append(classifAsset)
+//        }
+        
     }
     
-    func decideDuplicatePhotos() {
-        //TODO
-        for _ in photos {
-            isDuplicatedArr.append(true)
-        }
-        
+    //More as a code-holder for future complex decisions
+    func decideSimilarity(str1: String, str2: String) -> Bool {
+        return str1 == str2
     }
 
 }
@@ -236,7 +255,7 @@ class MyCustomCell: UITableViewCell {
 
 
 struct ClassifiedAsset {
-    var identifier = Int()
+    var identifier = String()
     var confidence = Float()
     var image = UIImage()
     var isDuplicated = false
