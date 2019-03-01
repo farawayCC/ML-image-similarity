@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		258A4FF9DC741B0A07CF63FD /* Pods_TestingMLAllImages.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA8EA2D371856AC6D1C8D452 /* Pods_TestingMLAllImages.framework */; };
-		BA42112721F0C38700326022 /* videoblocks-loading-bar-modern-concept-sign-progress-screen-download-idea-animation-design-load-alpha-channel-4k_swkumfvxw_thumbnail-full01.png in Resources */ = {isa = PBXBuildFile; fileRef = BA42112621F0C38700326022 /* videoblocks-loading-bar-modern-concept-sign-progress-screen-download-idea-animation-design-load-alpha-channel-4k_swkumfvxw_thumbnail-full01.png */; };
+		BA42112721F0C38700326022 /* loading-bar.png in Resources */ = {isa = PBXBuildFile; fileRef = BA42112621F0C38700326022 /* loading-bar.png */; };
 		BA87BC8E21EC85350002D72D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA87BC8D21EC85350002D72D /* AppDelegate.swift */; };
 		BA87BC9021EC85350002D72D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA87BC8F21EC85350002D72D /* ViewController.swift */; };
 		BA87BC9321EC85350002D72D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BA87BC9121EC85350002D72D /* Main.storyboard */; };
@@ -16,10 +16,11 @@
 		BA87BC9821EC85370002D72D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BA87BC9721EC85370002D72D /* Assets.xcassets */; };
 		BA87BC9B21EC85370002D72D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BA87BC9921EC85370002D72D /* LaunchScreen.storyboard */; };
 		BA87BCA321EC88510002D72D /* MobileNet.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = BA87BCA221EC88510002D72D /* MobileNet.mlmodel */; };
+		BAEE10732229460800227EF3 /* UIImage+CVPixelBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAEE10722229460800227EF3 /* UIImage+CVPixelBuffer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		BA42112621F0C38700326022 /* videoblocks-loading-bar-modern-concept-sign-progress-screen-download-idea-animation-design-load-alpha-channel-4k_swkumfvxw_thumbnail-full01.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "videoblocks-loading-bar-modern-concept-sign-progress-screen-download-idea-animation-design-load-alpha-channel-4k_swkumfvxw_thumbnail-full01.png"; sourceTree = "<group>"; };
+		BA42112621F0C38700326022 /* loading-bar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "loading-bar.png"; sourceTree = "<group>"; };
 		BA87BC8A21EC85350002D72D /* TestingMLAllImages.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestingMLAllImages.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA87BC8D21EC85350002D72D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BA87BC8F21EC85350002D72D /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -29,6 +30,7 @@
 		BA87BC9A21EC85370002D72D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		BA87BC9C21EC85370002D72D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BA87BCA221EC88510002D72D /* MobileNet.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MobileNet.mlmodel; sourceTree = "<group>"; };
+		BAEE10722229460800227EF3 /* UIImage+CVPixelBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+CVPixelBuffer.swift"; sourceTree = "<group>"; };
 		D45A5AB2934828B1FA3193DD /* Pods-TestingMLAllImages.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TestingMLAllImages.debug.xcconfig"; path = "Target Support Files/Pods-TestingMLAllImages/Pods-TestingMLAllImages.debug.xcconfig"; sourceTree = "<group>"; };
 		FA89F5B21B3052A2DD469522 /* Pods-TestingMLAllImages.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TestingMLAllImages.release.xcconfig"; path = "Target Support Files/Pods-TestingMLAllImages/Pods-TestingMLAllImages.release.xcconfig"; sourceTree = "<group>"; };
 		FA8EA2D371856AC6D1C8D452 /* Pods_TestingMLAllImages.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_TestingMLAllImages.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -87,10 +89,11 @@
 				BA87BC8D21EC85350002D72D /* AppDelegate.swift */,
 				BA87BC8F21EC85350002D72D /* ViewController.swift */,
 				BA87BC9121EC85350002D72D /* Main.storyboard */,
+				BAEE10722229460800227EF3 /* UIImage+CVPixelBuffer.swift */,
 				BA87BC9721EC85370002D72D /* Assets.xcassets */,
 				BA87BCA221EC88510002D72D /* MobileNet.mlmodel */,
 				BA87BC9921EC85370002D72D /* LaunchScreen.storyboard */,
-				BA42112621F0C38700326022 /* videoblocks-loading-bar-modern-concept-sign-progress-screen-download-idea-animation-design-load-alpha-channel-4k_swkumfvxw_thumbnail-full01.png */,
+				BA42112621F0C38700326022 /* loading-bar.png */,
 				BA87BC9C21EC85370002D72D /* Info.plist */,
 				BA87BC9421EC85350002D72D /* TestingMLAllImages.xcdatamodeld */,
 			);
@@ -160,7 +163,7 @@
 				BA87BC9B21EC85370002D72D /* LaunchScreen.storyboard in Resources */,
 				BA87BC9821EC85370002D72D /* Assets.xcassets in Resources */,
 				BA87BC9321EC85350002D72D /* Main.storyboard in Resources */,
-				BA42112721F0C38700326022 /* videoblocks-loading-bar-modern-concept-sign-progress-screen-download-idea-animation-design-load-alpha-channel-4k_swkumfvxw_thumbnail-full01.png in Resources */,
+				BA42112721F0C38700326022 /* loading-bar.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -220,6 +223,7 @@
 			files = (
 				BA87BCA321EC88510002D72D /* MobileNet.mlmodel in Sources */,
 				BA87BC9621EC85350002D72D /* TestingMLAllImages.xcdatamodeld in Sources */,
+				BAEE10732229460800227EF3 /* UIImage+CVPixelBuffer.swift in Sources */,
 				BA87BC9021EC85350002D72D /* ViewController.swift in Sources */,
 				BA87BC8E21EC85350002D72D /* AppDelegate.swift in Sources */,
 			);
