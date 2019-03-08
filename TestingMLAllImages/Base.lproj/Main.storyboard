@@ -54,14 +54,14 @@
                                                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="RKU-LY-02Z">
                                                     <rect key="frame" x="173" y="16" width="186.5" height="120"/>
                                                     <subviews>
-                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="classification result" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="nC1-26-Phg">
-                                                            <rect key="frame" x="0.0" y="0.0" width="186.5" height="99.5"/>
+                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" text="classification result" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="nC1-26-Phg">
+                                                            <rect key="frame" x="0.0" y="0.0" width="186.5" height="70"/>
                                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                             <nil key="textColor"/>
                                                             <nil key="highlightedColor"/>
                                                         </label>
-                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Is duplicated" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="LSg-Ja-7S3">
-                                                            <rect key="frame" x="0.0" y="99.5" width="186.5" height="20.5"/>
+                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="LSg-Ja-7S3">
+                                                            <rect key="frame" x="0.0" y="70" width="186.5" height="50"/>
                                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                             <nil key="textColor"/>
                                                             <nil key="highlightedColor"/>
@@ -70,7 +70,6 @@
                                                 </stackView>
                                             </subviews>
                                             <constraints>
-                                                <constraint firstItem="RKU-LY-02Z" firstAttribute="height" secondItem="iOD-MH-i7F" secondAttribute="height" id="5nx-ak-irR"/>
                                                 <constraint firstItem="RKU-LY-02Z" firstAttribute="top" secondItem="iOD-MH-i7F" secondAttribute="top" id="cAG-1N-1fB"/>
                                                 <constraint firstItem="RKU-LY-02Z" firstAttribute="leading" secondItem="iOD-MH-i7F" secondAttribute="trailing" constant="8" id="j1g-2Q-Wed"/>
                                                 <constraint firstItem="iOD-MH-i7F" firstAttribute="width" secondItem="fKc-oy-q8d" secondAttribute="width" multiplier="0.4" id="jOm-9v-cZa"/>
@@ -81,6 +80,7 @@
                                                 <constraint firstItem="iOD-MH-i7F" firstAttribute="leading" secondItem="fKc-oy-q8d" secondAttribute="leading" constant="15" id="tj2-tF-f92"/>
                                             </constraints>
                                         </tableViewCellContentView>
+                                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                         <connections>
                                             <outlet property="isDuplicatedLabel" destination="LSg-Ja-7S3" id="EiS-RO-dYG"/>
                                             <outlet property="myCellLabel" destination="nC1-26-Phg" id="x6V-lK-zIx"/>

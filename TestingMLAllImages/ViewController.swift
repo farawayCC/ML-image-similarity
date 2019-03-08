@@ -13,22 +13,30 @@ import ImageIO
 import Photos
 import OpalImagePicker
 
+
+/// Общий сценарий: Выбираем фото с помощью OpalImagePickerController, хранящиеся в images фото во viewDidAppear() превращаем в объекты структуры UserPhoto, тут же предсказывая для каждого элемента что на картинке (можно попробовать запустить предсказания параллельно). Запускаем перерисовку таблицы
+
+///TODO: Помимо распараллеливания предсказаний, можно не хранить фото после выбора, а только ссылки на них в память
+
 struct UserPhoto {
     var image: UIImage
     var descriprions: Set<String>
-    var isDuplicated: Bool
+    var groupNumber: Int
+    var isLastInGroup: Bool
 }
-
 
 class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, OpalImagePickerControllerDelegate {
     
+    //MARK: Outlets
+
     let model = MobileNet()
     typealias Prediction = (String, Double)
 
     var userPhotos = [UserPhoto]()
     var images = [CIImage]()
-    var totalCells = 0
     var consumedTimes = [Double]()
+    var groupNumber = 0
+    var needToUpdate = false
 
     @IBOutlet var tableView: UITableView!
     @IBOutlet weak var totalObjects: UILabel!
@@ -36,6 +44,7 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     @IBOutlet weak var currentStatusLabel: UILabel!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
+    //MARK: Main
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -49,27 +58,45 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
         currentStatusLabel.text = "Loading photos..."
         activityIndicator.startAnimating()
         
-        
-        // Populate TableView with data
-        for image in images {
-            let exactDate = Date()
-            currentStatusLabel.text = "Loading photos..."
-            let predictions = predictUsingCoreML(image: UIImage(ciImage: image), predictionsCount: 2)
+        if needToUpdate {
+            // Populate TableView with data
+            for image in images {
+                let exactDate = Date()
+                currentStatusLabel.text = "Loading photos..."
+                let predictions = predictUsingCoreML(image: UIImage(ciImage: image), predictionsCount: 2)
+                
+                userPhotos.append(
+                    UserPhoto(
+                        image: UIImage(ciImage: image),
+                        descriprions: convertPredictionsToSet(predictions: predictions),
+                        groupNumber: 0,
+                        isLastInGroup: false))
+                let endDate = Date().timeIntervalSince(exactDate)
+                consumedTimes.append(endDate)
+                let avgTime = Double(round(1000*calculateAverageTime(arr: consumedTimes))/1000)
+                timeDifference.text = String(avgTime) + " sec per image"
+            }
             
-            userPhotos.append(
-                UserPhoto(
-                    image: UIImage(ciImage: image),
-                    descriprions: convertPredictionsToSet(predictions: predictions),
-                    isDuplicated: false))
-            let endDate = Date().timeIntervalSince(exactDate)
-            consumedTimes.append(endDate)
-            timeDifference.text = String(calculateAverageTime(arr: consumedTimes))
+            // Deciding duplicates
+            let groupsOfSimilarPhotos = getGroupsOfSimilarPhotos(userPhotos)
+            userPhotos = [UserPhoto]()
+            // Каждому элементу присваиваем групповой индекс
+            for group in groupsOfSimilarPhotos {
+                for i in 0..<group.count {
+                    var copyOfPhoto = group[i]
+                    copyOfPhoto.groupNumber = groupNumber
+                    if i == group.count-1 {
+                        copyOfPhoto.isLastInGroup = true
+                    }
+                    userPhotos.append(copyOfPhoto)
+                }
+                groupNumber += 1
+            }
+            
+            tableView.reloadData()
+            needToUpdate = false
         }
-        // Deciding duplicates
-        userPhotos.sort{ $0.descriprions.intersection($1.descriprions).count > 2 }
         
-        currentStatusLabel.text = "Rendering"
-        tableView.reloadData()
         currentStatusLabel.text = ((images.count > 0) ? "Done" : "Waiting for photos")
         activityIndicator.stopAnimating()
     }
@@ -93,24 +120,19 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     
     //MARK: TableViewDelegate
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return totalCells
+        return userPhotos.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell:MyCustomCell = self.tableView.dequeueReusableCell(withIdentifier: "myCell") as! MyCustomCell
-        if self.userPhotos.count > indexPath.row {
-            let currentItem = self.userPhotos[indexPath.row]
-            cell.myImageView.image = currentItem.image
-            cell.isDuplicatedLabel.text = currentItem.isDuplicated ? "🎏" : ""
-            cell.myCellLabel?.text = currentItem.descriprions.count == 0 ?
-                "Loading..." :
-                currentItem.descriprions.joined(separator: ", ")
+        let cell:MyCustomCell = tableView.dequeueReusableCell(withIdentifier: "myCell") as! MyCustomCell
+        let currentItem = userPhotos[indexPath.row]
+        cell.myImageView.image = currentItem.image
+        if currentItem.groupNumber % 2 == 0 {
+            cell.backgroundColor = UIColor.white
         } else {
-            cell.myImageView.image = UIImage(named: "loading-bar")
-            cell.isDuplicatedLabel.text = ""
-            cell.myCellLabel?.text = "Loading..."
+            cell.backgroundColor = UIColor.init(displayP3Red: 205/255, green: 205/255, blue: 205/255, alpha: 1)
         }
-        
+        cell.myCellLabel?.text = currentItem.descriprions.count == 0 ? "Loading..." : currentItem.descriprions.joined(separator: ", ")
         return cell
     }
     
@@ -125,17 +147,16 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     }
     
     func imagePicker(_ picker: OpalImagePickerController, didFinishPickingAssets assets: [PHAsset]) {
+        needToUpdate = true
         var index = 0
-        print("Found \(assets.count) assets")
-        self.totalCells = assets.count
-        
+
         //Refresh data
         userPhotos = [UserPhoto]()
         images = [CIImage]()
         
         for asset in assets {
             images.append(getAssetThumbnail(asset: asset).0)
-            self.totalObjects.text = "Object \(index+1) / \(assets.count)"
+            totalObjects.text = "Object \(index+1) / \(assets.count)"
             index += 1
         }
         tableView.reloadData()
@@ -144,6 +165,29 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
     
     
     //MARK: Supp funcs
+    
+    private func getGroupsOfSimilarPhotos(_ userPhotos: [UserPhoto]) -> [[UserPhoto]] {
+        var photosToCheck = userPhotos
+        var similars = [[UserPhoto]]()
+        while let leftHandPhoto = photosToCheck.first {
+            var photosToIterate = photosToCheck
+            photosToIterate.removeFirst()
+            var hasIntersections = [UserPhoto]()
+            while let rightHandPhoto = photosToIterate.first {
+                if leftHandPhoto.descriprions.intersection(rightHandPhoto.descriprions).count > 0 {
+                    if hasIntersections.isEmpty {
+                        hasIntersections.append(leftHandPhoto)
+                    }
+                    hasIntersections.append(rightHandPhoto)
+                }
+                photosToIterate.removeFirst()
+            }
+            similars = hasIntersections.isEmpty ? similars: similars + [hasIntersections]
+            photosToCheck.removeFirst()
+        }
+        print(similars)
+        return similars
+    }
     
     func calculateAverageTime(arr: [Double]) -> Double {
         var total = 0.0
@@ -155,7 +199,6 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
         } else {
             return 0;
         }
-        
     }
     
     func convertPredictionsToSet(predictions: [Prediction]) -> Set<String> {
@@ -164,14 +207,6 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
             someSet.insert(predict.0)
         }
         return someSet
-    }
-    
-    func show(results: [Prediction]) -> String {
-        var s: [String] = []
-        for (i, pred) in results.enumerated() {
-            s.append(String(format: "%d: %@ (%3.2f%%)", i + 1, pred.0, pred.1 * 100))
-        }
-        return s.joined(separator: ", "/*"\n\n"*/)
     }
     
     func top(_ k: Int, _ prob: [String: Double]) -> [Prediction] {
@@ -194,7 +229,6 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
         }
         return (resultImage, orientationRaw)
     }
-    
 }
 
 
