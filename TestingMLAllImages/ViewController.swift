@@ -11,142 +11,210 @@ import CoreML
 import Vision
 import ImageIO
 import Photos
+import OpalImagePicker
 
 
-//По идее мы только идентификаторы распознанные можем запоминать и по их номерам потом говорить, что является дубликатом а что нет
-class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+/// Общий сценарий: Выбираем фото с помощью OpalImagePickerController, хранящиеся в images фото во viewDidAppear() превращаем в объекты структуры UserPhoto, тут же предсказывая для каждого элемента что на картинке (можно попробовать запустить предсказания параллельно). Запускаем перерисовку таблицы
+
+///TODO: Помимо распараллеливания предсказаний, можно не хранить фото после выбора, а только ссылки на них в память
+
+struct UserPhoto {
+    var image: UIImage
+    var descriprions: Set<String>
+    var groupNumber: Int
+    var isLastInGroup: Bool
+}
+
+class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, OpalImagePickerControllerDelegate {
     
-    var photos = [CIImage]()
-    var classificationsStr = [String]()
-    
-    let cellReuseIdentifier = "myCell"
-    
+    //MARK: Outlets
+
+    let model = MobileNet()
+    typealias Prediction = (String, Double)
+
+    var userPhotos = [UserPhoto]()
+    var images = [CIImage]()
+    var consumedTimes = [Double]()
+    var groupNumber = 0
+    var needToUpdate = false
+
     @IBOutlet var tableView: UITableView!
     @IBOutlet weak var totalObjects: UILabel!
     @IBOutlet weak var timeDifference: UILabel!
+    @IBOutlet weak var currentStatusLabel: UILabel!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
-    var startDate = Date()
-    var endDate = Date()
-    var totalCells = 0
-    var loadedCells = 0
-    
-    var classifiedAssets = [ClassifiedAsset]()
+    //MARK: Main
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         tableView.delegate = self
         tableView.dataSource = self
-        
-        PHPhotoLibrary.requestAuthorization { status in
-            switch status {
-                
-            case .authorized:
-                let fetchOptions = PHFetchOptions()
-                let allPhotos = PHAsset.fetchAssets(with: .image, options: fetchOptions)
-                print("Found \(allPhotos.count) assets")
-                self.totalCells = allPhotos.count
-                allPhotos.enumerateObjects({ (asset, index, stop) in
-                    let myCiImage = self.getAssetThumbnail(asset: asset).0
-                    self.photos.append(myCiImage)
-                    
-                    self.updateClassifications(
-                        for: myCiImage,
-                        orientation: self.getAssetThumbnail(asset: asset).1)
-                    self.totalObjects.text = "Object \(index+1) / \(allPhotos.count)"
-                })
-                print("Fetch images from library completed")
-                
-            case .denied, .restricted:
-                print("Not allowed")
-            case .notDetermined:
-                print("Not determined yet")
-            }
-        }
     }
     
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        currentStatusLabel.text = "Loading photos..."
+        activityIndicator.startAnimating()
+        
+        if needToUpdate {
+            // Populate TableView with data
+            for image in images {
+                let exactDate = Date()
+                currentStatusLabel.text = "Loading photos..."
+                let predictions = predictUsingCoreML(image: UIImage(ciImage: image), predictionsCount: 2)
+                
+                userPhotos.append(
+                    UserPhoto(
+                        image: UIImage(ciImage: image),
+                        descriprions: convertPredictionsToSet(predictions: predictions),
+                        groupNumber: 0,
+                        isLastInGroup: false))
+                let endDate = Date().timeIntervalSince(exactDate)
+                consumedTimes.append(endDate)
+                let avgTime = Double(round(1000*calculateAverageTime(arr: consumedTimes))/1000)
+                timeDifference.text = String(avgTime) + " sec per image"
+            }
+            
+            // Deciding duplicates
+            let groupsOfSimilarPhotos = getGroupsOfSimilarPhotos(userPhotos)
+            userPhotos = [UserPhoto]()
+            // Каждому элементу присваиваем групповой индекс
+            for group in groupsOfSimilarPhotos {
+                for i in 0..<group.count {
+                    var copyOfPhoto = group[i]
+                    copyOfPhoto.groupNumber = groupNumber
+                    if i == group.count-1 {
+                        copyOfPhoto.isLastInGroup = true
+                    }
+                    userPhotos.append(copyOfPhoto)
+                }
+                groupNumber += 1
+            }
+            
+            tableView.reloadData()
+            needToUpdate = false
+        }
+        
+        currentStatusLabel.text = ((images.count > 0) ? "Done" : "Waiting for photos")
+        activityIndicator.stopAnimating()
+    }
+    
+    //MARK: ML
+    
+    /*
+     This uses the Core ML-generated MobileNet class directly.
+     Downside of this method is that we need to convert the UIImage to a
+     CVPixelBuffer object ourselves. Core ML does not resize the image for
+     you, so it needs to be 224x224 because that's what the model expects.
+     */
+    func predictUsingCoreML(image: UIImage, predictionsCount: Int) -> [Prediction] {
+        if let pixelBuffer = image.pixelBuffer(width: 224, height: 224),
+            let prediction = try? model.prediction(image: pixelBuffer) {
+            return top(predictionsCount, prediction.classLabelProbs)
+        }
+        return [Prediction]()
+    }
+    
+    
+    //MARK: TableViewDelegate
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return totalCells
+        return userPhotos.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell:MyCustomCell = self.tableView.dequeueReusableCell(withIdentifier: cellReuseIdentifier) as! MyCustomCell
-        
-        do {
-            cell.myCellLabel?.text = self.classificationsStr[indexPath.row]
-            cell.myImageView.image = UIImage(ciImage: self.photos[indexPath.row])
-        } catch {
-            print("Seems like not all images processed")
+        let cell:MyCustomCell = tableView.dequeueReusableCell(withIdentifier: "myCell") as! MyCustomCell
+        let currentItem = userPhotos[indexPath.row]
+        cell.myImageView.image = currentItem.image
+        if currentItem.groupNumber % 2 == 0 {
+            cell.backgroundColor = UIColor.white
+        } else {
+            cell.backgroundColor = UIColor.init(displayP3Red: 205/255, green: 205/255, blue: 205/255, alpha: 1)
         }
-        
+        cell.myCellLabel?.text = currentItem.descriprions.count == 0 ? "Loading..." : currentItem.descriprions.joined(separator: ", ")
         return cell
     }
     
+    //MARK: Image Picker
     
-    //MARK: ML
-    lazy var classificationRequest: VNCoreMLRequest = {
-        do {
-            print("Start get model: \(Date())")
-            let model = try VNCoreMLModel(for: MobileNet().model)
-            let request = VNCoreMLRequest(model: model, completionHandler: { [weak self] request, error in
-                self?.processClassifications(for: request, error: error)
-            })
-            request.imageCropAndScaleOption = .centerCrop
-            return request
-        } catch {
-            fatalError("Failed to load Vision ML model: \(error)")
-        }
-    }()
+    @IBAction func pickImagesPressed(_ sender: Any) {
+        let imagePicker = OpalImagePickerController()
+        imagePicker.allowedMediaTypes = Set([PHAssetMediaType.image])
+        imagePicker.maximumSelectionsAllowed = 100
+        imagePicker.imagePickerDelegate = self
+        present(imagePicker, animated: true, completion: nil)
+    }
     
-    func updateClassifications(for ciImage: CIImage, orientation: Int) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            let handler = VNImageRequestHandler(
-                ciImage: ciImage,
-                orientation: CGImagePropertyOrientation(rawValue: UInt32(orientation)) ?? CGImagePropertyOrientation.up)
-            do {
-                try handler.perform([self.classificationRequest])
-            } catch {
-                /*
-                 This handler catches general image processing errors. The `classificationRequest`'s
-                 completion handler `processClassifications(_:error:)` catches errors specific
-                 to processing that request.
-                 */
-                print("Failed to perform classification.\n\(error.localizedDescription)")
-            }
+    func imagePicker(_ picker: OpalImagePickerController, didFinishPickingAssets assets: [PHAsset]) {
+        needToUpdate = true
+        var index = 0
+
+        //Refresh data
+        userPhotos = [UserPhoto]()
+        images = [CIImage]()
+        
+        for asset in assets {
+            images.append(getAssetThumbnail(asset: asset).0)
+            totalObjects.text = "Object \(index+1) / \(assets.count)"
+            index += 1
         }
+        tableView.reloadData()
+        presentedViewController?.dismiss(animated: true, completion: nil)
     }
     
     
-    /// Updates the UI with the results of the classification.
-    /// - Tag: ProcessClassifications
-    func processClassifications(for request: VNRequest, error: Error?) {
-        DispatchQueue.main.async {
-            guard let results = request.results else {
-                print("Unable to classify image.\n\(error!.localizedDescription)  \(Date())")
-                return
-            }
-            // The `results` will always be `VNClassificationObservation`s, as specified by the Core ML model in this project.
-            let classifications = results as! [VNClassificationObservation]
-            
-            if classifications.isEmpty {
-                print("Nothing recognized. \(Date())")
-            } else {
-                // Display top classifications ranked by confidence in the UI.
-                let topClassifications = classifications.prefix(2)
-                let descriptions = topClassifications.map { classification in
-                    return String(format: "  (%.2f) %@", classification.confidence, classification.identifier)
+    //MARK: Supp funcs
+    
+    private func getGroupsOfSimilarPhotos(_ userPhotos: [UserPhoto]) -> [[UserPhoto]] {
+        var photosToCheck = userPhotos
+        var similars = [[UserPhoto]]()
+        while let leftHandPhoto = photosToCheck.first {
+            var photosToIterate = photosToCheck
+            photosToIterate.removeFirst()
+            var hasIntersections = [UserPhoto]()
+            while let rightHandPhoto = photosToIterate.first {
+                if leftHandPhoto.descriprions.intersection(rightHandPhoto.descriprions).count > 0 {
+                    if hasIntersections.isEmpty {
+                        hasIntersections.append(leftHandPhoto)
+                    }
+                    hasIntersections.append(rightHandPhoto)
                 }
-                print("Classification:\n" + descriptions.joined(separator: "\n"))
-                
-                self.endDate = Date()
-                let diffTime = Float(self.endDate.timeIntervalSince(self.startDate))
-                
-                self.timeDifference.text = "Time taken: \((diffTime*10).rounded()/10)"
-                
-                self.classificationsStr.append(descriptions.joined(separator: "\n"))
+                photosToIterate.removeFirst()
             }
+            similars = hasIntersections.isEmpty ? similars: similars + [hasIntersections]
+            photosToCheck.removeFirst()
         }
-        tableView.reloadData()
+        print(similars)
+        return similars
+    }
+    
+    func calculateAverageTime(arr: [Double]) -> Double {
+        var total = 0.0
+        for value in arr {
+            total += value
+        }
+        if arr.count != 0 {
+            return total/Double(arr.count)
+        } else {
+            return 0;
+        }
+    }
+    
+    func convertPredictionsToSet(predictions: [Prediction]) -> Set<String> {
+        var someSet = Set<String>()
+        for predict in predictions {
+            someSet.insert(predict.0)
+        }
+        return someSet
+    }
+    
+    func top(_ k: Int, _ prob: [String: Double]) -> [Prediction] {
+        precondition(k <= prob.count)
+        
+        return Array(prob.map { x in (x.key, x.value) }
+            .sorted(by: { a, b -> Bool in a.1 > b.1 })
+            .prefix(through: k - 1))
     }
     
     func getAssetThumbnail(asset: PHAsset) -> (CIImage, Int) {
@@ -155,38 +223,17 @@ class MyViewController: UIViewController, UITableViewDelegate, UITableViewDataSo
         var resultImage = CIImage()
         var orientationRaw = 0
         option.isSynchronous = true
-        manager.requestImageData(for: asset, options: option) { (data, str, orient, someuseless) in
+        manager.requestImageData(for: asset, options: option) { (data, str, orient, someUselessVariable) in
             resultImage = CIImage(data: data ?? Data()) ?? CIImage()
             orientationRaw = orient.rawValue
-            self.loadedCells += 1
         }
-//        manager.requestImage(for: asset, targetSize: CGSize(width: 100, height: 100), contentMode: .aspectFit, options: option, resultHandler: {(result, info)->Void in
-//            resultImage = CIImage(image: result ?? UIImage()) ?? CIImage()
-//            orientationRaw = 0 //default
-//            self.loadedCells += 1
-//        })
         return (resultImage, orientationRaw)
     }
-
-    func populateClassifiedAssets(from assets: [PHAsset]) -> [CIImage] {
-        var ciImages = [CIImage]()
-        for asset in assets {
-            ciImages.append(getAssetThumbnail(asset: asset).0)
-        }
-        return ciImages
-    }
-
 }
 
 
 class MyCustomCell: UITableViewCell {
     @IBOutlet weak var myImageView: UIImageView!
     @IBOutlet weak var myCellLabel: UILabel!
-}
-
-
-struct ClassifiedAsset {
-    var identifier = Int()
-    var confidence = Float()
-    var image = UIImage()
+    @IBOutlet weak var isDuplicatedLabel: UILabel!
 }
